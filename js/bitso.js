@@ -48,6 +48,7 @@ module.exports = class bitso extends Exchange {
                 'fetchOpenInterestHistory': false,
                 'fetchOpenOrders': true,
                 'fetchOrder': true,
+                'fetchOrders': true,
                 'fetchOrderBook': true,
                 'fetchOrderTrades': true,
                 'fetchPosition': false,
@@ -124,6 +125,7 @@ module.exports = class bitso extends Exchange {
                         'mx_bank_codes',
                         'open_orders',
                         'order_trades/{oid}',
+                        'orders',
                         'orders/{oid}',
                         'user_trades',
                         'user_trades/{tid}',
@@ -861,6 +863,23 @@ module.exports = class bitso extends Exchange {
             }
         }
         throw new OrderNotFound (this.id + ': The order ' + id + ' not found.');
+    }
+
+    async fetchOrders (symbol = undefined, since = undefined, limit = undefined, params = {}) {
+        await this.loadMarkets ();
+        if (params.oids === undefined) {
+            throw new ExchangeError (this.id + ' fetchOrders() needs a `oids` parameter containing "<oid>,<oid>,..."');
+        }
+        const request = {
+            'oids': params.oids,
+        };
+        const response = await this.privateGetOrders(request);
+        const payload = this.safeValue (response, 'payload');
+        if (Array.isArray (payload)) {
+            const parsedOrders = payload.map(order => this.parseOrder(order));
+            return parsedOrders;
+        }
+        throw new OrderNotFound (this.id + ': Orders ' + params.oids + ' not found.');
     }
 
     async fetchOrderTrades (id, symbol = undefined, since = undefined, limit = undefined, params = {}) {
